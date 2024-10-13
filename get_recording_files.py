@@ -19,7 +19,7 @@ def get_recording_outputs(recording_dir: Union[str, os.PathLike]) -> Dict[str, U
         This sort of directory structrue is achieved by running standardize_data_filenames with copy_kpms_result
 
     Returns:
-    dict: A dictionary ...
+    output_files (Dict): A dictionary where the keys are the class of output files and the values are the corresponding filepath
     """
 
     def make_abs(path: Union[str, os.PathLike], root=recording_dir) -> Union[str, os.PathLike]:
@@ -49,6 +49,26 @@ def get_recording_outputs(recording_dir: Union[str, os.PathLike]) -> Dict[str, U
 
 
 def get_output_files_by_exp_group(data_dir: Union[str, os.PathLike]) -> List[Tuple[str, List[Dict[str, Union[str, os.PathLike]]]]]:
+    """
+    Gets paths of all output files for all recordings in data_dir. Output retains information on which experimental
+    group the files are part of. Experimental group names are determined by folder in the data_dir directory. So it is
+    essential to have the structure correctly.
+
+    :param data_dir: path of root data dir. Expected to have structure similar to this
+    ├── videos/
+                │   ├── exp_group_1/
+                │   │   ├── recording
+                │   │   │   ├── trimmed_SN_grp2_0mins-2024-02-07_11-08-27-_chamber_2_body.avi
+                │   │   │   ├── trimmed_SN_grp2_0mins-2024-02-07_11-08-27-_chamber_2_ftir.avi
+                │   │   │   ├── trimmed_SN_grp2_0mins-2024-02-07_11-08-27-_chamber_2_bodyDLC_resnet50_arcteryx500Nov4shuffle1_350000.h5
+                │   │   │   ├── other output files...
+
+    :return: List of (group_name, recordings) tuples where:
+    - group_name (str): Experimental group name (from parent directory)
+    - recordings (List[Dict]): List of recording data, each a dict with keys:
+        ['palmreader', 'kpms', 'deg', 'dlc', 'trans', 'ftir'] (subject to future changes)
+      Values are absolute paths to the corresponding output files.
+    """
     videos = os.path.join(data_dir, 'videos')
     exp_group_tuples = []
 
