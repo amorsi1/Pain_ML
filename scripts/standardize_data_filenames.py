@@ -1,8 +1,9 @@
 import os
 import warnings
 import shutil
-from typing import Dict
+from typing import Dict, Tuple
 import re
+
 
 def process_video_directories(project_root):
     """
@@ -61,35 +62,52 @@ def process_video_directories(project_root):
 
     return video_directories
 
-def flexi_add_exp_name(recording_name, exp_group):
+
+def flexi_add_exp_name(recording_name: str, exp_group: str) -> Tuple[str, bool]:
+    """
+    Adds experimental group name to recording filename if it isn't already part of the filename
+
+    :param recording_name: string of recording name. This is the name of the dir that the output files are in
+    :param exp_group: string of experimental group. This should be the name of the recording dir's parentdir
+
+    :return: Tuple with the dirname to use downstream and a boolean that flags if the recording dir needs to be renamed
+    """
+    name_changed = True
     # check if recording_name is already in the format {exp_group}-{recording}-{suffix}
     match = re.match(r'^(.*?)-', recording_name)
     if match:
+        # recording already has a prefix in front of it
         text_before_dash = match.group(1)
         if text_before_dash == exp_group:
-            return recording_name
+            # prefix is already the experimental group -> make no changes
+            name_changed = False
+            return recording_name, name_changed
         else:
-            return f'{exp_group}-{recording_name}'
-    return f'{exp_group}-{recording_name}'
+            # prefix is not the exp_group -> add it
+            new_name = f'{exp_group}-{recording_name}'
+            return new_name, name_changed
+    new_name = f'{exp_group}-{recording_name}'
+    return new_name, name_changed
+
 
 def process_recording(recording: str, files: list):
     recording_path = os.path.dirname(files[0]['full_path'])
     exp_group = os.path.basename(os.path.dirname(recording_path))
 
     # add experimental group to recording name
-    exp_group_recording = flexi_add_exp_name(recording,exp_group)
+    exp_group_recording, change_recording_path = flexi_add_exp_name(recording, exp_group)
 
     replacement_trans_string = f'{exp_group_recording}-trans'
     new_ftir_fname = f'{exp_group_recording}-ftir.avi'
 
-    def replace_string_and_rename(file: Dict[str,str],old_name: str,new_name: str):
+    def replace_string_and_rename(file_dict: Dict[str, str], old_name: str, new_name: str):
         """
         Checks if given file contains the old name. If it does then it replaces part of the filename then renames the
         files with the new naming structure implemented
         """
-        if old_name in file['filename']:
-            new_name = file['filename'].replace(old_name, new_name)
-            os.rename(file['full_path'],
+        if old_name in file_dict['filename']:
+            new_name = file_dict['filename'].replace(old_name, new_name)
+            os.rename(file_dict['full_path'],
                       os.path.join(recording_path, new_name))
 
     # if file is from analysis-public processing pipeline
@@ -138,15 +156,22 @@ def process_recording(recording: str, files: list):
                 But instead has the following file names: {[print(file['filename']) for file in files]}
                 '''
             warnings.warn(message, UserWarning)
+    if change_recording_path:
+        # rename recording folder now that all file operations inside of it are complete
+        new_recording_path = recording_path.replace(recording, exp_group_recording)
+        os.rename(recording_path, new_recording_path)
+
 
 def text_before_dash(text: str) -> str:
     match = re.match(r'^(.*?)-', text)
     if match:
         return match.group(1)
 
+
 def append_to_filename(filename: str, string_to_append: str) -> str:
     name, ext = os.path.splitext(filename)
     return f"{name}{string_to_append}{ext}"
+
 
 def copy_kpms_results(results_dir, data_dir):
     """
@@ -179,6 +204,7 @@ def copy_kpms_results(results_dir, data_dir):
                 # recording folder name may be {exp_group}-{unique_recording}
                 dest_path_retry = os.path.join(data_dir, 'videos', exp_group, f'{exp_group}-{unique_recording}')
                 if os.path.exists(dest_path_retry):
+                    # try different path format
                     dest_path = dest_path_retry
                     pass
                 else:
@@ -193,11 +219,13 @@ def copy_kpms_results(results_dir, data_dir):
 
             # Move the file
             src_file = os.path.join(results_dir, filename)
-            dest_file = os.path.join(dest_path, append_to_filename(filename,'-kpms'))
+            dest_file = os.path.join(dest_path, append_to_filename(filename, '-kpms'))
+            # note: this will overwrite the file at the destination path if one already exists
             shutil.copy2(src_file, dest_file)
             print(f"Moved {filename} to {dest_path}")
         else:
             print(f"Skipped {filename} - doesn't match expected filename format")
+
 
 def main():
     data_dir = '/mnt/hd0/Pain_ML_data'
@@ -205,12 +233,10 @@ def main():
     video_directory = process_video_directories(data_dir)
 
     for recording, files in video_directory.items():
-        process_recording(recording,files)
+        process_recording(recording, files)
 
     copy_kpms_results(results_dir, data_dir)
 
+
 if __name__ == "__main__":
     main()
-
-
-
