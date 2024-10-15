@@ -156,7 +156,7 @@ def process_one_hot_datasets(arrays: List[np.ndarray]) -> List[float]:
     freqs = [np.sum(arr)/len(arr) for arr in int_one_hot]
     return freqs
 
-def process_feature_summaries(data_dir: os.PathLike) -> List[Tuple[str,List[np.ndarray],List[Tuple[float,float]]]]:
+def generate_feature_summaries(data_dir: os.PathLike) -> List[Tuple[str,List[np.ndarray],List[Tuple[float,float]]]]:
     """
     Generates summaries of data in features.h5 files to be used as inputs for a linear classifier.
 
@@ -226,16 +226,16 @@ def process_feature_summaries(data_dir: os.PathLike) -> List[Tuple[str,List[np.n
         processed_summaries.append((exp_group_name, concatenated_data, one_hot_data))
     return processed_summaries
 
-def process_and_save_feature_summaries(data_dir: os.PathLike, target_dir: os.PathLike, filename='palmreader_features_summaries.pkl'):
+def generate_and_save_feature_summaries(data_dir: os.PathLike, target_dir: os.PathLike, filename='palmreader_features_summaries.pkl'):
     target_path = os.path.join(target_dir, filename)
-    summaries = process_feature_summaries(data_dir)
+    feature_summary = generate_feature_summaries(data_dir)
     with open(target_path, 'wb') as f:
-        pickle.dump(summaries, f)
+        pickle.dump(feature_summary, f)
 
 def main():
     data_dir = '/mnt/hd0/Pain_ML_data'
     target_dir = '/mnt/hd0/Pain_ML_data/summaries'
-    process_and_save_feature_summaries(data_dir, target_dir)
+    generate_and_save_feature_summaries(data_dir, target_dir)
 
 
 if __name__ == "__main__":
