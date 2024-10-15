@@ -86,6 +86,10 @@ def get_output_files_by_exp_group(data_dir: Union[str, os.PathLike]) -> List[Tup
         # get recordings within each experimental groups and append dicts of all their output file paths
         recording_output_dicts = []
         for recording in recordings:
+            if recording[0] == '.':
+                # allows us to skip hidden files
+                print(f'skipping hidden folder {recording}')
+                continue
             recording_path = os.path.join(exp_group_abs_path, recording)
             if os.path.isdir(recording_path):
                 recording_output_dicts.append(get_recording_outputs(recording_path))
