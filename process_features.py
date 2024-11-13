@@ -4,10 +4,9 @@ import numpy as np
 import os
 from typing import List, Dict, Tuple
 import h5py
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from get_recording_files import get_output_files_by_exp_group
-import logging
 import warnings
 
 
@@ -92,7 +91,29 @@ def calculate_bins(arrays: List[np.ndarray], num_bins: int) -> np.ndarray:
     return bin_edges
 
 
-def calculate_frequencies(arrays: List[np.ndarray], bin_edges: np.ndarray) -> np.ndarray:
+def one_hot_binning(values: np.ndarray, bin_boundaries: np.ndarray) -> np.ndarray:
+    """
+    Convert array of float values into one-hot encoded bin membership.
+
+    Args:
+        values: 1D array of float values to bin
+        bin_boundaries: 1D array of bin boundaries in ascending order
+                       (n boundaries creates n-1 bins)
+
+    Returns:
+        2D array of shape (len(values), len(bin_boundaries)-1) with one-hot encoding
+    """
+    # Use digitize to find which bin each value belongs to
+    # Note: np.digitize returns indices starting at 1, so we subtract 1
+    bin_indices = np.digitize(values, bin_boundaries) - 1
+
+    # Clip indices to handle values outside bin ranges
+    bin_indices = np.clip(bin_indices, 0, len(bin_boundaries) - 2)
+
+    # Create one-hot encoding using eye indexing
+    return np.eye(len(bin_boundaries) - 1)[bin_indices]
+
+def calculate_frequencies(arrays: List[np.ndarray], bin_edges: np.ndarray, return_binned_arrays=False) -> np.ndarray:
     """
     Calculate frequencies for each array based on the given bin edges.
 
@@ -110,11 +131,14 @@ def calculate_frequencies(arrays: List[np.ndarray], bin_edges: np.ndarray) -> np
         # # Calculate frequencies
         # freq = bin_counts / len(arr)
         # frequencies.append(freq)
+        if return_binned_arrays:
+            #instead of returning freqs, returns frame-by-frame one-hot array
+            hist = one_hot_binning(arr, bin_edges)
+        else:
+            hist, _ = np.histogram(arr, bins=bin_edges, density=True)
 
-        hist, _ = np.histogram(arr, bins=bin_edges, density=True)
-
-        if len(hist) != n_bins:
-            warnings.warn(f"Warning: Histogram for array {i} has {len(hist)} bins instead of the expected {n_bins}")
+            if len(hist) != n_bins:
+                warnings.warn(f"Warning: Histogram for array {i} has {len(hist)} bins instead of the expected {n_bins}")
 
         frequencies.append(hist)
     return frequencies
@@ -156,7 +180,7 @@ def process_one_hot_datasets(arrays: List[np.ndarray]) -> List[float]:
     freqs = [np.sum(arr)/len(arr) for arr in int_one_hot]
     return freqs
 
-def generate_feature_summaries(data_dir: os.PathLike) -> List[Tuple[str,List[np.ndarray],List[Tuple[float,float]]]]:
+def generate_feature_summaries(data_dir: os.PathLike) -> Tuple[List[Tuple[str,List[np.ndarray]]], List[Tuple[str,List[np.ndarray]]]]:
     """
     Generates summaries of data in features.h5 files to be used as inputs for a linear classifier.
 
@@ -168,10 +192,11 @@ def generate_feature_summaries(data_dir: os.PathLike) -> List[Tuple[str,List[np.
 
     :param data_dir: root of experiment
     :return:
-        List of (group_name, float_summary, one_hot_summary) tuples where:
+        Two identically structures lists of 2-item tuples in the format (group_name, data). One of the tuples has the float
+         data (group_name, float_data), and the other has the one_hot summary (group_name, float_data):
         - group_name (str): Experimental group name (from parent directory)
         - float_summary (List[np.ndarray]): List of float summary of recordings, with each recording represented by an array:
-        - one_hot_summary (Tuple[float,float]): Tuple of frequencies of one hot encoded data for each recording. Currently
+        - one_hot_summary (List[float]): List of frequencies of one hot encoded data for each recording. Currently
             only 'paw_guarding' and 'both_front_paws_lifted' included
     """
     # Get all features.h5 files regardless of experimental group
@@ -206,6 +231,7 @@ def generate_feature_summaries(data_dir: os.PathLike) -> List[Tuple[str,List[np.
 
     data_by_exp_group = get_output_files_by_exp_group(data_dir)
     processed_summaries = []
+    processed_one_hot = []
     for exp_group_name, recordings in data_by_exp_group:
         print(f'processing {exp_group_name}...')
         # get features data specific to the experimental group
@@ -222,15 +248,19 @@ def generate_feature_summaries(data_dir: os.PathLike) -> List[Tuple[str,List[np.
         # process (boolean) one-hot encoded datasets
         paw_guard = process_one_hot_datasets(features_data['paw_guarding'])
         paws_lifted = process_one_hot_datasets(features_data['both_front_paws_lifted'])
-        one_hot_data = list(zip(paw_guard, paws_lifted))
-        processed_summaries.append((exp_group_name, concatenated_data, one_hot_data))
-    return processed_summaries
+        one_hot_data = [list(item) for item in zip(paw_guard, paws_lifted)]
+        processed_summaries.append((exp_group_name, concatenated_data))
+        processed_one_hot.append((exp_group_name, one_hot_data))
+    return processed_summaries, processed_one_hot
 
 def generate_and_save_feature_summaries(data_dir: os.PathLike, target_dir: os.PathLike, filename='palmreader_features_summaries.pkl'):
     target_path = os.path.join(target_dir, filename)
-    feature_summary = generate_feature_summaries(data_dir)
+    one_hot_target = os.path.join(target_dir, 'features_one_hot.pkl')
+    feature_summary, one_hot_summary = generate_feature_summaries(data_dir)
     with open(target_path, 'wb') as f:
         pickle.dump(feature_summary, f)
+    with open(one_hot_target, 'wb') as f:
+        pickle.dump(one_hot_summary, f)
 
 def main():
     data_dir = '/mnt/hd0/Pain_ML_data'

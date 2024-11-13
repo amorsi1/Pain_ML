@@ -11,7 +11,7 @@ def get_recording_outputs(recording_dir: Union[str, os.PathLike]) -> Dict[str, U
     recording_dir (str): The path of the recording directory. function looks for the following files:
         palmreader : filename of 'features.h5'
         kpms : ends with 'kpms.csv'
-        deg : None TODO: implement naming structure
+        deg : ends with 'deg.csv'
         dlc : ends with '000.h5'
         trans : ends with 'trans.avi'
         ftir: ends with 'trans.avi'
@@ -34,6 +34,8 @@ def get_recording_outputs(recording_dir: Union[str, os.PathLike]) -> Dict[str, U
             output_files['palmreader'] = make_abs(file)
         elif file.endswith('kpms.csv'):
             output_files['kpms'] = make_abs(file)
+        elif file.endswith('deg.csv'):
+            output_files['deg'] = make_abs(file)
         elif file.endswith('000.h5'):
             output_files['dlc'] = make_abs(file)
         elif file.endswith('trans.avi'):
@@ -41,7 +43,7 @@ def get_recording_outputs(recording_dir: Union[str, os.PathLike]) -> Dict[str, U
         elif file.endswith('ftir.avi'):
             output_files['ftir'] = make_abs(file)
     for k, v in output_files.items():
-        if v is None and k != 'deg':  # TODO: remove second boolean once deg logic is implemented
+        if v is None:
             message = f'No file found for output file {k} in folder {os.path.basename(recording_dir)}'
             warnings.warn(message)
 
