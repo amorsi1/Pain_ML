@@ -105,7 +105,7 @@ def combine_ARBEL_outputs(output_folder: Union[os.PathLike, str], ending_motif="
         # load each output file as column
         dfs[i] = pd.read_csv(file, index_col=False)
     # Ensure columns have same shape and combine into dataframe
-    if len(np.unique([i.shape for i in dfs])) == 1:
+    if len(np.unique([i.shape for i in dfs], axis=0)) == 1:
         combined = pd.concat(dfs, axis=1)
         if save:
             if not isinstance(save, str):
