@@ -96,11 +96,16 @@ def combine_ARBEL_outputs(output_folder: Union[os.PathLike, str], ending_motif="
     Takes in ARBEL_output folder path, identifies output files by ending_motif, then returns dataframe of the combined
     files
     '''
-    output_files = [os.path.join(output_folder, file) for file in os.listdir(output_folder) if file.endswith(ending_motif)]
+    # Get output files and sort them so that df column order is consistent
+    output_files = sorted([os.path.join(output_folder, file) for file in os.listdir(output_folder) if file.endswith(ending_motif)])
+    if not output_files:
+        raise UserWarning(f'No output files found in {os.path.basename(output_folder)}. Skipping...')
     dfs = np.array([None] * len(output_files))
     for i, file in enumerate(output_files):
+        # load each output file as column
         dfs[i] = pd.read_csv(file, index_col=False)
-    if len(np.unique([i.shape for i in dfs])):
+    # Ensure columns have same shape and combine into dataframe
+    if len(np.unique([i.shape for i in dfs])) == 1:
         combined = pd.concat(dfs, axis=1)
         if save:
             if not isinstance(save, str):
