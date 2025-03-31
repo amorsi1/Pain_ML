@@ -3,14 +3,10 @@ import pickle
 import numpy as np
 import os
 from typing import List, Dict, Tuple
-import h5py
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from tqdm import tqdm
 from get_recording_files import get_output_files_by_exp_group
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-import warnings
 
 
 def load_csv_column_to_list(filename, column_name) -> List:
@@ -94,7 +90,7 @@ def get_top_syllables(data_dir: str, percent: float) -> List[str]:
     # select subset of syllables that meet percent criteria
     num_syllables_needed = num_of_syllables_for_percentage_of_data(sorted_dict, percent)
     top_syllables = list(sorted_dict.keys())[:num_syllables_needed]
-
+    #TODO: change output into list of int's, and test downstream effects
     return top_syllables
 
 def viz_top_syllables_cdf(data_dir, percent: float, save_to=None):
@@ -167,12 +163,12 @@ def get_syllables_freqs(syllable_seq: List[str], syllable_map: List[str]):
             freqs[index] = c / num_syllables
     return freqs
 
-def generate_kpms_summary(data_dir: os.PathLike) -> List[Tuple[str,np.ndarray]]:
+def generate_kpms_summary(data_dir: os.PathLike, percent: int) -> List[Tuple[str,np.ndarray]]:
     #Load in recording data
     data_by_exp_group = get_output_files_by_exp_group(data_dir)
 
     # Identify which syllables to consider
-    syllable_map = get_top_syllables_and_viz(data_dir,94,
+    syllable_map = get_top_syllables_and_viz(data_dir, percent,
                                              '/mnt/hd0/Pain_ML_data/summaries/kpms_top_syllable_selection.png')
 
     process_syllable_freq = []
@@ -184,16 +180,17 @@ def generate_kpms_summary(data_dir: os.PathLike) -> List[Tuple[str,np.ndarray]]:
         process_syllable_freq.append((exp_group_name, syllable_freqs))
     return process_syllable_freq
 
-def generate_and_save_kpms_summary(data_dir: os.PathLike, target_dir: os.PathLike, filename='kpms_summaries.pkl'):
+def generate_and_save_kpms_summary(data_dir: os.PathLike, target_dir: os.PathLike,
+                                   percent: int, filename='kpms_summaries.pkl'):
     target_path = os.path.join(target_dir, filename)
-    kpms_summary = generate_kpms_summary(data_dir)
+    kpms_summary = generate_kpms_summary(data_dir, percent)
     with open(target_path, 'wb') as f:
         pickle.dump(kpms_summary, f)
 
 def main():
     data_dir = '/mnt/hd0/Pain_ML_data'
     target_dir = '/mnt/hd0/Pain_ML_data/summaries'
-    generate_and_save_kpms_summary(data_dir, target_dir)
+    generate_and_save_kpms_summary(data_dir, target_dir, 90)
 
 if __name__ == "__main__":
     main()

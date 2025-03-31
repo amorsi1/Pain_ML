@@ -229,7 +229,9 @@ def copy_kpms_results(results_dir, data_dir):
 
 def main():
     data_dir = '/mnt/hd0/Pain_ML_data'
-    results_dir = r'/mnt/hd0/keypoint-moseq/formalin_capsaicin_PBS/FCP_project/2024_09_23-00_12_00/results'
+    #"/mnt/hd0/keypoint-moseq/scg2KO_ctrl/scg2KO"
+    results_dir = '/mnt/hd0/Pain_ML_data/kpms_results'
+
     video_directory = process_video_directories(data_dir)
 
     for recording, files in video_directory.items():

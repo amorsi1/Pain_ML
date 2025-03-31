@@ -60,9 +60,9 @@ def get_output_files_by_exp_group(data_dir: Union[str, os.PathLike]) -> List[Tup
     ├── videos/
                 │   ├── exp_group_1/
                 │   │   ├── recording
-                │   │   │   ├── trimmed_SN_grp2_0mins-2024-02-07_11-08-27-_chamber_2_body.avi
+                │   │   │   ├── trimmed_SN_grp2_0mins-2024-02-07_11-08-27-_chamber_2_trans.avi
                 │   │   │   ├── trimmed_SN_grp2_0mins-2024-02-07_11-08-27-_chamber_2_ftir.avi
-                │   │   │   ├── trimmed_SN_grp2_0mins-2024-02-07_11-08-27-_chamber_2_bodyDLC_resnet50_arcteryx500Nov4shuffle1_350000.h5
+                │   │   │   ├── trimmed_SN_grp2_0mins-2024-02-07_11-08-27-_chamber_2_transDLC_resnet50_arcteryx500Nov4shuffle1_350000.h5
                 │   │   │   ├── other output files...
 
     :return: List of (group_name, recordings) tuples where:
